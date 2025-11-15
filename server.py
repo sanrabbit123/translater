@@ -6,6 +6,7 @@ import asyncio
 import redis.asyncio as redis
 import json
 import os
+import uuid
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -79,7 +80,7 @@ async def translate_text(text: str) -> str:
         return tokenizer.decode(target_ids, skip_special_tokens=True)
     return await asyncio.to_thread(_translate)
 
-async def process_translation(original_text: str):
+async def process_translation(original_text: str, task_id: str):
     try:
         sentences = [s.strip() for s in original_text.split("\n") if s.strip()]
         
@@ -88,6 +89,7 @@ async def process_translation(original_text: str):
         for sentence in sentences:
             english = await translate_text(sentence)
             results.append({
+                "id": task_id,
                 "original": sentence,
                 "english": english
             })
@@ -108,8 +110,14 @@ async def translate():
         return jsonify({"error": "text field required"}), 400
     
     korean_text = data["text"]
-    response = jsonify({"message": "will do"})
-    asyncio.create_task(process_translation(korean_text))
+    task_id = str(uuid.uuid4())
+
+    response = jsonify({
+        "message": "will do",
+        "id": task_id
+    })
+
+    asyncio.create_task(process_translation(korean_text, task_id))
     
     return response, 202
 
